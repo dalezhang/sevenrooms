@@ -1,0 +1,42 @@
+default: &default
+  op_url: "https://testapp.optitable.com/en/admin/restaurant/check/interface/"
+  op_api_key: 691abcdb44eefbaf376709872ad798f6
+  mq_url: "amqp://bIndoMiddleWare:Bin$Mid!lePoIsAGh@35.194.205.200:5672"
+  # mq_url: "amqp://bIndoMiddleWare:Bin$Mid!lePoIsAGh@127.0.0.1:5677/"
+  retry: 3
+  stores:
+    "1":
+      name: "test1"
+      store_id: 7264
+      op_api_key: 691abcdb44eefbaf376709872ad798f6
+    # "2":
+    #   name: "test2"
+    #   store_id: 5807
+    #   op_api_key: 691abcdb44eefbaf376709872ad798f6
+#
+# production specific
+#
+production:
+  <<: *default
+  op_url: "https://app.optitable.com/en/admin/restaurant/check/interface"
+  op_api_key: 691abcdb44eefbaf376709872ad798f6
+  retry: 3
+  stores:
+    "Royal Plaza Hotel - Di King Heen":
+      name: "Royal Plaza Hotel - Di King Heen"
+      store_id: 33860
+      op_api_key: 0289f3e8699442878b803e24b415b478
+    "Royal Plaza Hotel - La Scala":
+      name: "Royal Plaza Hotel - La Scala"
+      store_id: 33852
+      op_api_key: f08e00b912354f85bd04fe39ad02c8c4
+    "Royal Plaza Hotel - Lion Rock":
+      name: "Royal Plaza Hotel - Di King Heen"
+      store_id: 33864
+      op_api_key: 13655d4ca720482c94e86a53dbc9be59
+
+#
+# development specific
+#
+staging:
+  <<: *default

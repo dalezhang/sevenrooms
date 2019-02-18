@@ -1,0 +1,18 @@
+package optional
+
+//go:generate gotemplate -outfmt "optional_%v" "github.com/imiskolee/optional/templates"  Bool(bool,optional_scanner.ScanBool)
+//go:generate gotemplate -outfmt "optional_%v"  "github.com/imiskolee/optional/templates" Byte(byte,optional_scanner.ScanByte)
+//go:generate gotemplate -outfmt "optional_%v"  "github.com/imiskolee/optional/templates" Float32(float32,optional_scanner.ScanFloat)
+//go:generate gotemplate -outfmt "optional_%v"  "github.com/imiskolee/optional/templates" Float64(float64,optional_scanner.ScanFloat)
+//go:generate gotemplate -outfmt "optional_%v"  "github.com/imiskolee/optional/templates" Int(int,optional_scanner.ScanInt)
+//go:generate gotemplate -outfmt "optional_%v"  "github.com/imiskolee/optional/templates" Int16(int16,optional_scanner.ScanInt)
+//go:generate gotemplate -outfmt "optional_%v"  "github.com/imiskolee/optional/templates" Int32(int32,optional_scanner.ScanInt)
+//go:generate gotemplate -outfmt "optional_%v"  "github.com/imiskolee/optional/templates" Int64(int64,optional_scanner.ScanInt)
+//go:generate gotemplate -outfmt "optional_%v"  "github.com/imiskolee/optional/templates" Int8(int8,optional_scanner.ScanInt)
+//go:generate gotemplate -outfmt "optional_%v"  "github.com/imiskolee/optional/templates" String(string,optional_scanner.ScanString)
+//go:generate gotemplate -outfmt "optional_%v"  "github.com/imiskolee/optional/templates" Uint(uint,optional_scanner.ScanUint)
+//go:generate gotemplate -outfmt "optional_%v"  "github.com/imiskolee/optional/templates" Uint16(uint16,optional_scanner.ScanUint)
+//go:generate gotemplate -outfmt "optional_%v"  "github.com/imiskolee/optional/templates" Uint32(uint32,optional_scanner.ScanUint)
+//go:generate gotemplate -outfmt "optional_%v"  "github.com/imiskolee/optional/templates" Uint64(uint64,optional_scanner.ScanUint)
+//go:generate gotemplate -outfmt "optional_%v"  "github.com/imiskolee/optional/templates" Uint8(uint8,optional_scanner.ScanUint)
+//go:generate gotemplate -outfmt "optional_%v"  "github.com/imiskolee/optional/templates" Uintptr(uintptr,optional_scanner.ScanUint)

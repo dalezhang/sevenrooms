@@ -1,0 +1,70 @@
+default: &default
+  gateway:
+    adapter: mysql2
+    encoding: utf8
+    reconnect: true
+    database: gateway
+    pool: 5
+    username: gateway
+    password: pass4u
+    host: 10.140.0.11
+    port: 3306
+  restaurant:
+    adapter: mysql2
+    encoding: utf8
+    reconnect: true
+    database: restaurant
+    pool: 5
+    username: gateway
+    password: pass4u
+    host: 10.140.0.11
+    port: 3306
+  optitable:
+    adapter: mysql2
+    encoding: utf8
+    reconnect: true
+    database: optitable
+    pool: 25
+    username: gateway
+    password: pass4u
+    host: 10.140.0.11
+    port: 3306
+#
+# production specific
+#
+production:
+  gateway:
+    adapter: mysql2
+    encoding: utf8
+    reconnect: true
+    database: bindo_gateway
+    pool: 5
+    username: optitable
+    password: BindoPass4u
+    host: db-master.prd.tw.bindo.in
+    port: 3306
+  restaurant:
+    adapter: mysql2
+    encoding: utf8
+    reconnect: true
+    database: restaurant
+    pool: 5
+    username: optitable
+    password: BindoPass4u
+    host: db-master.prd.tw.bindo.in
+    port: 3306
+  optitable:
+    adapter: mysql2
+    encoding: utf8
+    reconnect: true
+    database: optitable
+    pool: 25
+    username: optitable
+    password: BindoPass4u
+    host: db-master.prd.tw.bindo.in
+    port: 3306
+#
+# development specific
+#
+staging:
+  <<: *default
