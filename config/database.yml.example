@@ -1,0 +1,41 @@
+default: &default
+  gateway:
+    adapter: mysql2
+    encoding: utf8
+    reconnect: true
+    database: gateway
+    pool: 5
+    username: gateway
+    password: pass4u
+    host: 10.140.0.11
+    port: 3306
+  restaurant:
+    adapter: mysql2
+    encoding: utf8
+    reconnect: true
+    database: restaurant
+    pool: 5
+    username: gateway
+    password: pass4u
+    host: 10.140.0.11
+    port: 3306
+  optitable:
+    adapter: mysql2
+    encoding: utf8
+    reconnect: true
+    database: optitable
+    pool: 25
+    username: root
+    password: root
+    host: localhost
+    port: 3306
+#
+# production specific
+#
+production:
+  <<: *default
+#
+# development specific
+#
+staging:
+  <<: *default

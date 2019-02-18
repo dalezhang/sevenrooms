@@ -1,0 +1,65 @@
+runMode: dev
+version: 0.0.1
+log:
+  level: debug
+systemDatabase:
+  dns: root:root@tcp(127.0.0.1:3306)/dns
+  driver: mysql
+  readTimeout: 100
+  riteTimeout: 100
+#用于本地测试
+rubyBindoDatabase:
+  dns: root:root@tcp(127.0.0.1:3306)/bindo_development?parseTime=true
+  driver: mysql
+  readTimeout: 100
+  riteTimeout: 100
+#用于go test
+rubyBindoTestDatabase:
+  dns: root:root@tcp(127.0.0.1:3306)/bindo_test?parseTime=true
+  driver: mysql
+  maxOpenConns: 10
+  readTimeout: 100
+  riteTimeout: 100
+
+systemCache:
+  dns: 127.0.0.1:6379
+  readTimeout: 100
+  writeTimeout: 100
+urlMap:
+  bindoOauthURL: https://oauth2.trybindo.com
+  bindoGatewayApiURL: https://gateway.trybindo.com
+  bindoNotifyURL: http://127.0.0.1:8080/api/1/item
+defaultSecret:
+  defaultClientID: 2x9bfv9okp25jzwvrnzi0it
+  defaultClientSecret: aoug6tdt76lyopsbu5mr1ug3b
+  defaultDashboardClientID: 1clvjqb9fmv5bkjoq2akbc1h4
+  defaultDashboardClientSecret: 1tfcglxmnjv4t263dji05wmjr
+  bindoNotifyToken: ca1426693ff4ba20df14ba3753dd07c2
+secret:
+  ccPassPhrase: bindo123
+  ssnPassPhrase: bindo000
+  ccKeyPublicKey: /Users/miskolee/.secret.pem
+  ccKeyPrivateKey: /Users/miskolee/.secret.key
+queue:
+  broker: amqp://guest:guest@localhost:5672/
+  defaultQueue: machinery_tasks
+  resultBackend: redis://127.0.0.1:6379
+  amqp:
+    exchange: machinery_exchange
+    exchangeType: direct
+    bindingKey: machinery_task
+faye:
+  url: http://localhost:9292/faye
+  keys:
+    bindo: 4e74d616d921d0fa25b9
+    gateway: 9b52af0d129d616d47e4
+storage:
+  s3AccessKeyId: xxxx
+  s3AccessKeySecret: xxxx
+  s3Region:  xxxx
+  buckets:
+    asserts:
+      bucket: xxx
+      host: xxx
+
+

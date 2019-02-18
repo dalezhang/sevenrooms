@@ -1,0 +1,79 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "BFRwcsUq1SPTtFJiAkPe/sbLR28=",
+			"path": "bindolabs/bindocommon/helpers/gls",
+			"revision": "cdf3356f9a1dcdbe65984892031b5a84ebb94890",
+			"revisionTime": "2018-12-27T10:51:37Z"
+		},
+		{
+			"checksumSHA1": "+mLHvKXpR+7/5sGtmOc/IaT4ghE=",
+			"path": "bindolabs/bindocommon/helpers/logger",
+			"revision": "cdf3356f9a1dcdbe65984892031b5a84ebb94890",
+			"revisionTime": "2018-12-27T10:51:37Z"
+		},
+		{
+			"checksumSHA1": "NVFuNpjBYfjTQizCC0VfwA3517c=",
+			"path": "bindolabs/bindocommon/helpers/rabbitmq",
+			"revision": "cdf3356f9a1dcdbe65984892031b5a84ebb94890",
+			"revisionTime": "2018-12-27T10:51:37Z"
+		},
+		{
+			"checksumSHA1": "wmiJbuFVCxg22zwXIeLsVCudyeY=",
+			"path": "github.com/go-sql-driver/mysql",
+			"revision": "c45f530f8e7fe40f4687eaa50d0c8c5f1b66f9e0",
+			"revisionTime": "2018-12-18T12:36:37Z"
+		},
+		{
+			"checksumSHA1": "oCk29MVjqeOaps/IzbAN3nzD5Pk=",
+			"path": "github.com/gobuffalo/envy",
+			"revision": "3c96536452167a705ca5a70b831d3810e1e10452",
+			"revisionTime": "2018-08-18T15:39:26Z"
+		},
+		{
+			"checksumSHA1": "Fd6z9x+MzOucu2S26cadbLxUwYo=",
+			"path": "github.com/imiskolee/optional",
+			"revision": "2c682b8f74ba8315fc99664e16ec6874de27ccf9",
+			"revisionTime": "2018-07-16T04:36:45Z"
+		},
+		{
+			"checksumSHA1": "146rtN0qzxq1/OlMQ8qg7UQUoIw=",
+			"path": "github.com/imiskolee/optional/optional_scanner",
+			"revision": "2c682b8f74ba8315fc99664e16ec6874de27ccf9",
+			"revisionTime": "2018-07-16T04:36:45Z"
+		},
+		{
+			"checksumSHA1": "GWZt8djqK/GoHgon8POT508+BXM=",
+			"path": "github.com/jinzhu/gorm",
+			"revision": "5ad6f621e6f59672f5b5061df85b243436fde048",
+			"revisionTime": "2018-12-13T13:04:51Z"
+		},
+		{
+			"checksumSHA1": "eECxSkwh0WmhLwaxHfkvcLOWS08=",
+			"path": "github.com/jinzhu/gorm/dialects/mysql",
+			"revision": "5ad6f621e6f59672f5b5061df85b243436fde048",
+			"revisionTime": "2018-12-13T13:04:51Z"
+		},
+		{
+			"checksumSHA1": "4eelJOSLZoDzLuaJvgilOBVNovU=",
+			"path": "github.com/jinzhu/inflection",
+			"revision": "04140366298a54a039076d798123ffa108fff46c",
+			"revisionTime": "2018-03-08T03:36:59Z"
+		},
+		{
+			"checksumSHA1": "CjxR/aHKEs3MyfBhfQej1nDrJvs=",
+			"path": "github.com/joho/godotenv",
+			"revision": "23d116af351c84513e1946b527c88823e476be13",
+			"revisionTime": "2018-09-11T08:04:31Z"
+		},
+		{
+			"checksumSHA1": "W8mzTLRjnooGtHwWaxSX8eq8hlY=",
+			"path": "github.com/patrickmn/go-cache",
+			"revision": "5633e0862627c011927fa39556acae8b1f1df58a",
+			"revisionTime": "2018-08-15T05:31:27Z"
+		}
+	],
+	"rootPath": "bindolabs/optitable_middleware"
+}

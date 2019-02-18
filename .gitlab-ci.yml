@@ -1,0 +1,69 @@
+image: miskolee/ci-golang-kubectl:0.0.3
+
+services:
+  - docker:dind
+
+before_script:
+  - export REPO_NAME='bindolabs/optitable_middleware'
+  - mkdir -p /develop/src
+  - export GOPATH=/develop
+  - mkdir -p $GOPATH/src/bindolabs
+  - echo $CI_PROJECT_DIR
+  - ln -s $CI_PROJECT_DIR $GOPATH/src/bindolabs
+  - cd $GOPATH/src/$REPO_NAME
+  - export PROJECT_DIR=$GOPATH/src/$REPO_NAME
+  - ls $PROJECT_DIR
+  - export GIT_BRANCH=$CI_COMMIT_REF_NAME
+  - export DOCKER_IMAGE="asia.gcr.io/bindo-staging-tw/middleware/optitable_middleware/$GIT_BRANCH:$CI_COMMIT_SHA"
+  - source $PROJECT_DIR/ci/init-env.sh
+  - sh $PROJECT_DIR/ci/hosts.sh
+  - export PAGE_URL_PREFIX='http://sources.bindolabs.com'
+  - export PAGE_PATH=_resources/$REPO_NAME/$GIT_BRANCH
+  - export COVERAGE_URL=$PAGE_URL_PREFIX/$PAGE_PATH/$CI_COMMIT_SHA.html
+stages:
+  - Lint
+  - BuildBinary
+  - DockerImage
+  - Deploy
+
+Lint:
+  stage: Lint
+  script:
+    - bash ci/lint-gofmt.sh
+    - bash ci/lint-govet.sh
+  tags:
+    - middleware
+
+BuildBinary:
+  stage: BuildBinary
+  only:
+    refs:
+      - dev
+      - alpha
+      - master
+  script:
+    - bash ci/build.sh
+  tags:
+    - middleware
+  artifacts:
+    paths:
+      - dist
+    expire_in: 1 days
+
+DockerImage:
+  image: docker
+  stage: DockerImage
+  only:
+    refs:
+      - dev
+      - alpha
+      - master  
+  script:
+    - ls $PROJECT_DIR
+    - cp Dockerfile dist/
+    - cp -rf config dist/
+    - ls dist
+    - sh ci/login.sh
+    - sh ci/docker.sh
+  tags:
+    - middleware
