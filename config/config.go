@@ -1,7 +1,7 @@
 package config
 
 import (
-	"bindolabs/optitable_middleware/log"
+	"bindolabs/sevenrooms/log"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -24,17 +24,20 @@ type Config struct {
 	Prod    bool
 	Debug   bool
 
-	lk sync.RWMutex
+	token string
+	lk    sync.RWMutex
 
 	DBs map[string]DB
 	*Setting
 }
 type Setting struct {
-	OpApiKey string           `yaml:"op_api_key"`
-	OpUrl    string           `yaml:"op_url"`
-	MQUrl    string           `yaml:"mq_url"`
-	Retry    int              `yaml:"retry"`
-	Stores   map[string]Store `yaml:"stores"`
+	OpUrl        string           `yaml:"op_url"`
+	Retry        int              `yaml:"retry"`
+	Stores       map[string]Store `yaml:"stores"`
+	ClientID     string           `yaml:"client_id"`
+	ClientSecret string           `yaml:"client_secret"`
+	PosID        string           `yaml:"pos_id"`
+	lk           sync.RWMutex
 }
 type DB struct {
 	Adapter  string
@@ -46,8 +49,9 @@ type DB struct {
 	Port     string
 }
 type Store struct {
-	StoreID  int    `yaml:"store_id"`
-	OpApiKey string `yaml:"op_api_key"`
+	StoreID int    `yaml:"store_id"`
+	VenueID string `yaml:"venue_id"`
+	Name    string `yaml:"name"`
 }
 
 func Init() error {
@@ -78,6 +82,7 @@ func Init() error {
 		return err
 	}
 	ValidateSetting()
+	Conf.loadToken()
 	Conf.HasInit = true
 	return nil
 }
@@ -109,14 +114,14 @@ func load(out interface{}, file, env string) error {
 
 func ValidateSetting() {
 	var errStrs []string
-	if Conf.Setting.OpApiKey == "" {
-		errStrs = append(errStrs, "Config OPApiKey is not set")
+	if Conf.Setting.ClientID == "" {
+		errStrs = append(errStrs, "Config ClientID is not set")
 	}
 	if Conf.Setting.OpUrl == "" {
 		errStrs = append(errStrs, "Config OpUrl is not set")
 	}
-	if Conf.Setting.MQUrl == "" {
-		errStrs = append(errStrs, "Config MQUrl is not set")
+	if Conf.Setting.ClientSecret == "" {
+		errStrs = append(errStrs, "Config ClientSecret is not set")
 	}
 
 	if len(errStrs) > 0 {

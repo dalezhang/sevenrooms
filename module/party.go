@@ -1,12 +1,12 @@
 package module
 
 import (
-	"bindolabs/optitable_middleware/config"
-	"bindolabs/optitable_middleware/db"
-	"bindolabs/optitable_middleware/gatewaymodels"
-	"bindolabs/optitable_middleware/log"
-	"bindolabs/optitable_middleware/models"
-	"bindolabs/optitable_middleware/restaurantmodels"
+	"bindolabs/sevenrooms/config"
+	"bindolabs/sevenrooms/db"
+	"bindolabs/sevenrooms/gatewaymodels"
+	"bindolabs/sevenrooms/log"
+	"bindolabs/sevenrooms/models"
+	"bindolabs/sevenrooms/restaurantmodels"
 	"time"
 
 	"fmt"

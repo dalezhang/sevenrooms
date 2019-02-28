@@ -1,13 +1,13 @@
 package models
 
 import (
-	"bindolabs/optitable_middleware/config"
-	"bindolabs/optitable_middleware/db"
-	"bindolabs/optitable_middleware/gatewaymodels"
-	"bindolabs/optitable_middleware/log"
-	"bindolabs/optitable_middleware/optitable"
+	"bindolabs/sevenrooms/config"
+	"bindolabs/sevenrooms/db"
+	"bindolabs/sevenrooms/gatewaymodels"
+	"bindolabs/sevenrooms/log"
+
+	"bindolabs/sevenrooms/sevenroom"
 	"fmt"
-	"net/url"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -51,35 +51,35 @@ type Resp struct {
 
 func (table *Table) UpdateCheck() (err error) {
 	var resp Resp
-	param := make(url.Values, 7)
 	err, store := config.GetStore(table.StoreID)
 	if err != nil {
 		log.Logger.Errorf("GetStore err: %s", err)
 		return
 	}
-	param.Set("check_ref", table.CheckRef)
-	param.Set("check_open_time", fmt.Sprintf("%d", table.CheckOpenTime))
-	param.Set("check_close_time", fmt.Sprintf("%d", table.CheckCloseTime))
-	param.Set("work_date", table.RestaurantUpdatedAt.Format("2006-01-02"))
-	param.Set("table", table.Table)
-	if table.GuestCount == 0 {
-		param.Set("guest_count", "1")
-	} else {
-		param.Set("guest_count", fmt.Sprintf("%d", table.GuestCount))
+	params := map[string]interface{}{
+		"function":         "update_cover",
+		"check_open_time":  time.Unix(table.CheckOpenTime, 0).Format(time.RFC3339),
+		"table":            table.Table,
+		"order_number":     table.CheckRef,
+		"store_id":         store.StoreID,
+		"store_name":       store.Name,
+		"check_close_time": time.Now().Format(time.RFC3339),
+		"total_amount":     table.TotalAmount,
 	}
-	param.Set("child_count", fmt.Sprintf("%d", table.ChildCount))
-	param.Set("api-key", store.OpApiKey)
-	param.Set("function", "update_check")
-	// param.Set("function", "close_check")
+	if table.GuestCount == 0 {
+		params["guest_count"] = 1
+	} else {
+		params["guest_count"] = table.GuestCount
+	}
+	err = sevenroom.PostWebhooks(store.VenueID, &params, &resp)
 
-	err = optitable.Get(&param, &resp)
 	log.Logger.Infof("update_check response: %+v", resp)
 	if err != nil {
-		log.Logger.Errorf("Get optitable err %s", err)
+		log.Logger.Errorf("Get sevenroom err %s", err)
 		return
 	}
 	if resp.Result != "success" {
-		err = fmt.Errorf("Get optitable err, resp: %+v", resp)
+		err = fmt.Errorf("Get sevenroom err, resp: %+v", resp)
 		log.Logger.Error(err)
 		return
 	}
@@ -94,35 +94,51 @@ func (table *Table) UpdateCheck() (err error) {
 
 func (table *Table) CloseCheck() (err error) {
 	var resp Resp
-	param := make(url.Values, 7)
 	err, store := config.GetStore(table.StoreID)
 	if err != nil {
 		log.Logger.Errorf("GetStore err: %s", err)
 		return
 	}
-
-	param.Set("check_ref", table.CheckRef)
-	param.Set("check_open_time", fmt.Sprintf("%d", table.CheckOpenTime))
-	param.Set("check_close_time", fmt.Sprintf("%d", time.Now().Unix()))
-	param.Set("table", table.Table)
-	if table.GuestCount == 0 {
-		param.Set("guest_count", "1")
-	} else {
-		param.Set("guest_count", fmt.Sprintf("%d", table.GuestCount))
+	err, lineItems := table.GetLineItems()
+	if err != nil {
+		log.Logger.Errorf("LineItems err: %s", err)
+		return
 	}
-	param.Set("child_count", fmt.Sprintf("%d", table.ChildCount))
-	param.Set("total_amount", fmt.Sprintf("%f", table.TotalAmount))
-	param.Set("api-key", store.OpApiKey)
-	param.Set("function", "close_check")
-
-	err = optitable.Get(&param, &resp)
+	var lineItemData []map[string]interface{}
+	for _, l := range lineItems {
+		a := map[string]interface{}{
+			"listing_barcode": l.ListingBarcode,
+			"name":            l.Name,
+			"qty":             l.Qty,
+			"price":           l.Price,
+			"net_total":       l.NetTotal,
+		}
+		lineItemData = append(lineItemData, a)
+	}
+	params := map[string]interface{}{
+		"function":         "close_check",
+		"check_open_time":  time.Unix(table.CheckOpenTime, 0).Format(time.RFC3339),
+		"table":            table.Table,
+		"order_number":     table.CheckRef,
+		"store_id":         store.StoreID,
+		"store_name":       store.Name,
+		"check_close_time": time.Now().Format(time.RFC3339),
+		"total_amount":     table.TotalAmount,
+		"item":             lineItemData,
+	}
+	if table.GuestCount == 0 {
+		params["guest_count"] = 1
+	} else {
+		params["guest_count"] = table.GuestCount
+	}
+	err = sevenroom.PostWebhooks(store.VenueID, &params, &resp)
 	log.Logger.Infof("close_check response: %+v", resp)
 	if err != nil {
-		log.Logger.Errorf("Get optitable err %s", err)
+		log.Logger.Errorf("Get sevenroom err %s", err)
 		return
 	}
 	if resp.Result != "success" {
-		err = fmt.Errorf("Get optitable err, resp: %+v", resp)
+		err = fmt.Errorf("Get sevenroom err, resp: %+v", resp)
 		log.Logger.Error(err)
 		return
 	}
@@ -137,34 +153,33 @@ func (table *Table) CloseCheck() (err error) {
 
 func (table *Table) CreateCheck() (err error) {
 	var resp Resp
-	param := make(url.Values, 7)
 
 	err, store := config.GetStore(table.StoreID)
 	if err != nil {
 		log.Logger.Errorf("GetStore err: %s", err)
 		return
 	}
-
-	param.Set("check_ref", table.CheckRef)
-	param.Set("check_open_time", fmt.Sprintf("%d", table.CheckOpenTime))
-	param.Set("table", table.Table)
-	// param.Set("table", fmt.Sprintf("T%s", table.Table))
-	if table.GuestCount == 0 {
-		param.Set("guest_count", "1")
-	} else {
-		param.Set("guest_count", fmt.Sprintf("%d", table.GuestCount))
+	params := map[string]interface{}{
+		"function":        "new_check",
+		"check_open_time": time.Unix(table.CheckOpenTime, 0).Format(time.RFC3339),
+		"table":           table.Table,
+		"order_number":    table.CheckRef,
+		"store_id":        store.StoreID,
+		"store_name":      store.Name,
 	}
-	param.Set("child_count", fmt.Sprintf("%d", table.ChildCount))
-	param.Set("api-key", store.OpApiKey)
-	param.Set("function", "new_check")
-	err = optitable.Get(&param, &resp)
+	if table.GuestCount == 0 {
+		params["guest_count"] = 1
+	} else {
+		params["guest_count"] = table.GuestCount
+	}
+	err = sevenroom.PostWebhooks(store.VenueID, &params, &resp)
 	log.Logger.Infof("new_check response: %+v", resp)
 	if err != nil {
-		log.Logger.Errorf("Get optitable err %s", err)
+		log.Logger.Errorf("CreateCheck err %s", err)
 		return
 	}
 	if resp.Result != "success" {
-		err = fmt.Errorf("Get optitable err, resp: %+v", resp)
+		err = fmt.Errorf("Get sevenroom err, resp: %+v", resp)
 		log.Logger.Error(err)
 		return
 	}
@@ -181,36 +196,36 @@ func (table *Table) CreateCheck() (err error) {
 func (table *Table) MoveTable() (err error) {
 
 	var resp Resp
-	param := make(url.Values, 7)
 
 	err, store := config.GetStore(table.StoreID)
 	if err != nil {
 		log.Logger.Errorf("GetStore err: %s", err)
 		return
 	}
-
-	param.Set("check_ref", table.CheckRef)
-	param.Set("check_open_time", fmt.Sprintf("%d", table.CheckOpenTime))
-	param.Set("target_table", table.Table)
-	param.Set("org_table", table.OrgTable)
-	param.Set("work_date", table.RestaurantUpdatedAt.Format("2006-01-02"))
-	if table.GuestCount == 0 {
-		param.Set("guest_count", "1")
-	} else {
-		param.Set("guest_count", fmt.Sprintf("%d", table.GuestCount))
+	params := map[string]interface{}{
+		"function":        "move_table",
+		"check_open_time": time.Unix(table.CheckOpenTime, 0).Format(time.RFC3339),
+		"table":           table.Table,
+		"order_number":    table.CheckRef,
+		"store_id":        store.StoreID,
+		"store_name":      store.Name,
+		"from_table":      table.OrgTable,
+		"to_table":        table.Table,
 	}
+	if table.GuestCount == 0 {
+		params["guest_count"] = 1
+	} else {
+		params["guest_count"] = table.GuestCount
+	}
+	err = sevenroom.PostWebhooks(store.VenueID, &params, &resp)
 
-	param.Set("child_count", fmt.Sprintf("%d", table.ChildCount))
-	param.Set("api-key", store.OpApiKey)
-	param.Set("function", "move_table")
-	err = optitable.Get(&param, &resp)
 	log.Logger.Infof("new_check response: %+v", resp)
 	if err != nil {
-		log.Logger.Errorf("Get optitable err %s", err)
+		log.Logger.Errorf("Get sevenroom err %s", err)
 		return
 	}
 	if resp.Result != "success" {
-		err = fmt.Errorf("Get optitable err, resp: %+v", resp)
+		err = fmt.Errorf("Get sevenroom err, resp: %+v", resp)
 		log.Logger.Error(err)
 		return
 	}
@@ -226,35 +241,34 @@ func (table *Table) MoveTable() (err error) {
 
 func (table *Table) VoidCheck() (err error) {
 	var resp Resp
-	param := make(url.Values, 7)
 
 	err, store := config.GetStore(table.StoreID)
 	if err != nil {
 		log.Logger.Errorf("GetStore err: %s", err)
 		return
 	}
-
-	param.Set("check_ref", table.CheckRef)
-	param.Set("check_open_time", fmt.Sprintf("%d", table.CheckOpenTime))
-	param.Set("target_table", table.Table)
-	param.Set("work_date", table.RestaurantUpdatedAt.Format("2006-01-02"))
-	if table.GuestCount == 0 {
-		param.Set("guest_count", "1")
-	} else {
-		param.Set("guest_count", fmt.Sprintf("%d", table.GuestCount))
+	params := map[string]interface{}{
+		"function":        "void_check",
+		"check_open_time": time.Unix(table.CheckOpenTime, 0).Format(time.RFC3339),
+		"table":           table.Table,
+		"order_number":    table.CheckRef,
+		"store_id":        store.StoreID,
+		"store_name":      store.Name,
 	}
+	if table.GuestCount == 0 {
+		params["guest_count"] = 1
+	} else {
+		params["guest_count"] = table.GuestCount
+	}
+	err = sevenroom.PostWebhooks(store.VenueID, &params, &resp)
 
-	param.Set("child_count", fmt.Sprintf("%d", table.ChildCount))
-	param.Set("api-key", store.OpApiKey)
-	param.Set("function", "void_check")
-	err = optitable.Get(&param, &resp)
 	log.Logger.Infof("new_check response: %+v", resp)
 	if err != nil {
-		log.Logger.Errorf("Get optitable err %s", err)
+		log.Logger.Errorf("Get sevenroom err %s", err)
 		return
 	}
 	if resp.Result != "success" {
-		err = fmt.Errorf("Get optitable err, resp: %+v", resp)
+		err = fmt.Errorf("Get sevenroom err, resp: %+v", resp)
 		log.Logger.Error(err)
 		return
 	}
@@ -336,28 +350,26 @@ func (table *Table) GetAndSaveTransactions() (err error, trans []Transaction) {
 
 func (table *Table) CanclePayment() (err error) {
 	var resp Resp
-	param := make(url.Values, 7)
 
 	err, store := config.GetStore(table.StoreID)
 	if err != nil {
 		log.Logger.Errorf("GetStore err: %s", err)
 		return
 	}
-
-	param.Set("check_ref", table.CheckRef)
-	param.Set("check_open_time", fmt.Sprintf("%d", table.CheckOpenTime))
-	param.Set("target_table", table.Table)
-	param.Set("work_date", table.RestaurantUpdatedAt.Format("2006-01-02"))
-	if table.GuestCount == 0 {
-		param.Set("guest_count", "1")
-	} else {
-		param.Set("guest_count", fmt.Sprintf("%d", table.GuestCount))
+	params := map[string]interface{}{
+		"function":        "cancel_payment",
+		"check_open_time": time.Unix(table.CheckOpenTime, 0).Format(time.RFC3339),
+		"table":           table.Table,
+		"order_number":    table.CheckRef,
+		"store_id":        store.StoreID,
+		"store_name":      store.Name,
 	}
-
-	param.Set("child_count", fmt.Sprintf("%d", table.ChildCount))
-	param.Set("api-key", store.OpApiKey)
-	param.Set("function", "cancel_payment")
-	err = optitable.Get(&param, &resp)
+	if table.GuestCount == 0 {
+		params["guest_count"] = 1
+	} else {
+		params["guest_count"] = table.GuestCount
+	}
+	err = sevenroom.PostWebhooks(store.VenueID, &params, &resp)
 	log.Logger.Infof("cancle_payment response: %+v", resp)
 	if err != nil {
 		log.Logger.Errorf("CanclePayment err %s", err)
@@ -374,6 +386,40 @@ func (table *Table) CanclePayment() (err error) {
 	err = db.DB.Model(&table).Save(&table).Error
 	if err != nil {
 		log.Logger.Errorf("VoidCheck save table err: %s", err)
+	}
+	return
+}
+
+func (table *Table) GetLineItems() (err error, lineItems []LineItem) {
+	var gLineItem gatewaymodels.LineItem
+	var gLineItems []gatewaymodels.LineItem
+	var lineItem LineItem
+	if err = db.GatewayDB.Model(&gLineItem).Where("order_id = ?", table.OrderID).Find(&gLineItems).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+		}
+		log.Logger.Errorf("find GatewayDB LineItems err: %s", err)
+		return
+	}
+	if err = db.DB.Model(&lineItem).Where("table_id = ? ", table.ID).Delete("").Error; err != nil {
+		log.Logger.Errorf("delete LineItems err: %s", err)
+		return
+	}
+
+	for _, l := range gLineItems {
+		var lineItem LineItem
+		lineItem.TableID = table.ID
+		lineItem.GatewayLineItemID = l.ID.V()
+		lineItem.Name = l.Label.V()
+		lineItem.Qty = l.Quantity.V()
+		lineItem.Price = l.Price.V()
+		lineItem.NetTotal = l.Total.V()
+		lineItem.GetListingBarcode()
+		if err = db.DB.Model(&lineItem).Create(&lineItem).Error; err != nil {
+			log.Logger.Errorf("create LineItems err: %s", err)
+			return
+		}
+		lineItems = append(lineItems, lineItem)
+
 	}
 	return
 }

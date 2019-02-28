@@ -4,7 +4,7 @@ services:
   - docker:dind
 
 before_script:
-  - export REPO_NAME='bindolabs/optitable_middleware'
+  - export REPO_NAME='bindolabs/sevenrooms'
   - mkdir -p /develop/src
   - export GOPATH=/develop
   - mkdir -p $GOPATH/src/bindolabs
@@ -14,7 +14,7 @@ before_script:
   - export PROJECT_DIR=$GOPATH/src/$REPO_NAME
   - ls $PROJECT_DIR
   - export GIT_BRANCH=$CI_COMMIT_REF_NAME
-  - export DOCKER_IMAGE="asia.gcr.io/bindo-staging-tw/middleware/optitable_middleware/$GIT_BRANCH:$CI_COMMIT_SHA"
+  - export DOCKER_IMAGE="asia.gcr.io/bindo-staging-tw/middleware/sevenrooms/$GIT_BRANCH:$CI_COMMIT_SHA"
   - source $PROJECT_DIR/ci/init-env.sh
   - sh $PROJECT_DIR/ci/hosts.sh
   - export PAGE_URL_PREFIX='http://sources.bindolabs.com'

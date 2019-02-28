@@ -1,18 +1,15 @@
 package main
 
 import (
-	"bindolabs/optitable_middleware/config"
-	"bindolabs/optitable_middleware/db"
-	"bindolabs/optitable_middleware/log"
-	"bindolabs/optitable_middleware/models"
-	"bindolabs/optitable_middleware/module"
-	"bindolabs/optitable_middleware/optitable"
-	"encoding/json"
+	"bindolabs/sevenrooms/config"
+	"bindolabs/sevenrooms/db"
+	"bindolabs/sevenrooms/log"
+	"bindolabs/sevenrooms/models"
+	"bindolabs/sevenrooms/module"
+	"bindolabs/sevenrooms/sevenroom"
 	"flag"
 	"fmt"
 	"time"
-
-	"github.com/streadway/amqp"
 )
 
 var (
@@ -35,17 +32,17 @@ func main() {
 	}
 	defer db.Exit()
 	if *generate {
-		log.Logger.Info("generate database tables")
-		db.DB.LogMode(true).AutoMigrate(models.DBModels...).AutoMigrate(models.DBModels...)
+		log.Logger.Info("generate databases")
+		if err := db.DB.LogMode(true).AutoMigrate(models.DBModels...).AutoMigrate(models.DBModels...).Error; err != nil {
+			log.Logger.Error("generate databases err", err)
+		}
 		return
 	}
-	if err = optitable.Init(); err != nil {
-		log.Logger.Errorf("init optitable err: %s", err)
+	if err = sevenroom.Init(); err != nil {
+		log.Logger.Errorf("init sevenrooms err: %s", err)
 		return
 	}
 	GetPartyMsgFromDB()
-	// GetPartyMsgFromMQ()
-
 }
 func GetPartyMsgFromDB() {
 	var lock bool
@@ -74,75 +71,6 @@ func GetPartyMsgFromDB() {
 		}
 	}()
 
-	forever := make(chan bool)
-	<-forever
-}
-
-func GetPartyMsgFromMQ() {
-	fmt.Println("config.Conf.Setting.MQUrl = ", config.Conf.Setting.MQUrl)
-	conn, err := amqp.Dial(config.Conf.Setting.MQUrl)
-
-	defer conn.Close()
-	if err != nil {
-		log.Logger.Errorf("Failed to connect to RabbitMQ: %s", err)
-		panic(err)
-	}
-
-	rabbitCh, err := conn.Channel()
-	if err != nil {
-		failOnError(err, "Failed to open a channel")
-		panic(err)
-	}
-
-	defer rabbitCh.Close()
-
-	q, err := rabbitCh.QueueDeclare(
-		EventPartyExchangeName, // name
-		true,  // durable
-		false, // delete when unused
-		false, // exclusive
-		false, // no-wait
-		nil,   // arguments
-	)
-	failOnError(err, "Failed to declare a queue")
-	err = rabbitCh.QueueBind(
-		EventPartyExchangeName,
-		"u.*",
-		"parties",
-		false,
-		nil,
-	)
-	failOnError(err, "Failed to declare a queue")
-	if err != nil {
-		panic(err)
-	}
-
-	msgs, err := rabbitCh.Consume(
-		q.Name, // queue
-		"",     // consumer
-		true,   // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
-	)
-	failOnError(err, "Failed to register a consumer")
-
-	go func() {
-		for d := range msgs {
-			// str, _ := json.Marshal(d)
-			// log.Logger.Infof("msg:", string(str))
-			// log.Logger.Infof("Received a message: %s", d.Body)
-			fmt.Printf("Received a message: %s\n", d.Body)
-			var partyMessage module.PartyMqMessage
-			json.Unmarshal(d.Body, &partyMessage)
-			log.Logger.Infof("receive msg from Party: %s", partyMessage.PartyID)
-			if err := partyMessage.FilterPartyBySettingStores(); err == nil {
-				partyMessage.AnalyzeRecordFromMQ()
-			}
-			// hasGetMgs = true
-		}
-	}()
 	forever := make(chan bool)
 	<-forever
 }

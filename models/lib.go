@@ -4,5 +4,6 @@ var (
 	DBModels = []interface{}{
 		&Table{},
 		&Transaction{},
+		&LineItem{},
 	}
 )

@@ -1,5 +1,5 @@
 default: &default
-  op_url: "https://testapp.optitable.com/en/admin/restaurant/check/interface/"
+  op_url: "https://testapp.sevenrooms.com/en/admin/restaurant/check/interface/"
   op_api_key: 691abcdb44eefbaf376709872ad798f6
   mq_url: "amqp://bIndoMiddleWare:Bin$Mid!lePoIsAGh@35.194.205.200:5672/"
   # mq_url: "amqp://bIndoMiddleWare:Bin$Mid!lePoIsAGh@127.0.0.1:5677/"
