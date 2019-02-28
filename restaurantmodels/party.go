@@ -1,8 +1,8 @@
 package restaurantmodels
 
 import (
-	"bindolabs/optitable_middleware/db"
-	"bindolabs/optitable_middleware/log"
+	"bindolabs/sevenrooms/db"
+	"bindolabs/sevenrooms/log"
 	"time"
 
 	"github.com/imiskolee/optional"

@@ -1,1 +1,1 @@
-* 1 * * * /bin/bash /opt/optitable_middleware/pack_log.sh
+* 1 * * * /bin/bash /opt/sevenrooms/pack_log.sh

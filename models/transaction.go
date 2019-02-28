@@ -1,8 +1,8 @@
 package models
 
 import (
-	"bindolabs/optitable_middleware/db"
-	"bindolabs/optitable_middleware/log"
+	"bindolabs/sevenrooms/db"
+	"bindolabs/sevenrooms/log"
 	"fmt"
 	"time"
 
@@ -21,7 +21,7 @@ type Transaction struct {
 }
 
 func (*Transaction) TableName() string {
-	return "transaction"
+	return "transactions"
 }
 
 const (

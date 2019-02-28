@@ -1,12 +1,12 @@
 package db
 
 import (
-	"bindolabs/optitable_middleware/config"
+	"bindolabs/sevenrooms/config"
 	"flag"
 	"fmt"
 	"strings"
 
-	"bindolabs/optitable_middleware/log"
+	"bindolabs/sevenrooms/log"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
@@ -41,7 +41,7 @@ func Init(sl *zap.SugaredLogger) error {
 				GatewayDB, err = gorm.Open("mysql", fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?parseTime=True&loc=Local", dbConfig.Username, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.Database))
 			case "restaurant":
 				RestDB, err = gorm.Open("mysql", fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?parseTime=True&loc=Local", dbConfig.Username, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.Database))
-			case "optitable":
+			case "sevenroom":
 				DB, err = gorm.Open("mysql", fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?parseTime=True&loc=Local", dbConfig.Username, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.Database))
 			}
 		} else {
