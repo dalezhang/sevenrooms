@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sync"
 
 	"bindolabs/sevenrooms/config"
@@ -91,8 +92,14 @@ func (c *Client) doRequest(method, api string, params url.Values, bodyParams int
 		fmt.Println("\n try ====", try)
 		err = doRequest(method, api, c.Token, params, bodyParams, response)
 		if err != nil {
-			switch err {
-			case InvalidTokenErr:
+			fmt.Println("\n err=============", err)
+			r := bytes.NewReader([]byte(fmt.Sprintln(err)))
+			mached, matcherr := regexp.MatchReader(".*Permission denied.*", r)
+			if matcherr != nil {
+				fmt.Printf("\n matcherr =============== %+v \n", matcherr)
+			}
+			if mached {
+				fmt.Println("\n mached ===============")
 				log.Logger.Warnf("invaild token try[%d]again", try)
 				c.refresh()
 				c.wait()
@@ -142,7 +149,7 @@ func doRequest(method, api string, token string, params url.Values, bodyParams i
 		request.Header.Set("Content-Type", contentType)
 	}
 	if token != "" {
-		request.Header.Set("Authorzation", token)
+		request.Header.Set("Authorization", token)
 	}
 
 	if config.Conf.Debug {
@@ -166,11 +173,14 @@ func doRequest(method, api string, token string, params url.Values, bodyParams i
 	}
 
 	if resp.StatusCode != http.StatusOK {
-
 		return fmt.Errorf("req[%+v], resp[code:%d, %s]", request, resp.StatusCode, string(bodyBytes))
 	}
 
 	if response == nil {
+		return nil
+	}
+	if string(bodyBytes) == "" {
+		fmt.Printf("resp.Body=========%+v", string(bodyBytes))
 		return nil
 	}
 

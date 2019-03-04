@@ -45,12 +45,8 @@ func (*Table) TableName() string {
 	return "tables"
 }
 
-type Resp struct {
-	Result string `json:"result"`
-}
-
 func (table *Table) UpdateCheck() (err error) {
-	var resp Resp
+	var resp interface{}
 	err, store := config.GetStore(table.StoreID)
 	if err != nil {
 		log.Logger.Errorf("GetStore err: %s", err)
@@ -78,11 +74,6 @@ func (table *Table) UpdateCheck() (err error) {
 		log.Logger.Errorf("Get sevenroom err %s", err)
 		return
 	}
-	if resp.Result != "success" {
-		err = fmt.Errorf("Get sevenroom err, resp: %+v", resp)
-		log.Logger.Error(err)
-		return
-	}
 	table.HasSync = true
 	table.Status = TableStatusUpdate
 	err = db.DB.Model(&table).Save(&table).Error
@@ -93,7 +84,7 @@ func (table *Table) UpdateCheck() (err error) {
 }
 
 func (table *Table) CloseCheck() (err error) {
-	var resp Resp
+	var resp interface{}
 	err, store := config.GetStore(table.StoreID)
 	if err != nil {
 		log.Logger.Errorf("GetStore err: %s", err)
@@ -137,11 +128,6 @@ func (table *Table) CloseCheck() (err error) {
 		log.Logger.Errorf("Get sevenroom err %s", err)
 		return
 	}
-	if resp.Result != "success" {
-		err = fmt.Errorf("Get sevenroom err, resp: %+v", resp)
-		log.Logger.Error(err)
-		return
-	}
 	table.HasSync = true
 	table.Status = TableStatusClose
 	err = db.DB.Model(&table).Save(&table).Error
@@ -152,7 +138,7 @@ func (table *Table) CloseCheck() (err error) {
 }
 
 func (table *Table) CreateCheck() (err error) {
-	var resp Resp
+	var resp interface{}
 
 	err, store := config.GetStore(table.StoreID)
 	if err != nil {
@@ -178,11 +164,6 @@ func (table *Table) CreateCheck() (err error) {
 		log.Logger.Errorf("CreateCheck err %s", err)
 		return
 	}
-	if resp.Result != "success" {
-		err = fmt.Errorf("Get sevenroom err, resp: %+v", resp)
-		log.Logger.Error(err)
-		return
-	}
 	table.CheckCloseTime = 0
 	table.HasSync = true
 	table.Status = TableStatusCreate
@@ -195,7 +176,7 @@ func (table *Table) CreateCheck() (err error) {
 
 func (table *Table) MoveTable() (err error) {
 
-	var resp Resp
+	var resp interface{}
 
 	err, store := config.GetStore(table.StoreID)
 	if err != nil {
@@ -224,11 +205,6 @@ func (table *Table) MoveTable() (err error) {
 		log.Logger.Errorf("Get sevenroom err %s", err)
 		return
 	}
-	if resp.Result != "success" {
-		err = fmt.Errorf("Get sevenroom err, resp: %+v", resp)
-		log.Logger.Error(err)
-		return
-	}
 
 	table.HasSync = true
 	table.Status = TableStatusMove
@@ -240,7 +216,7 @@ func (table *Table) MoveTable() (err error) {
 }
 
 func (table *Table) VoidCheck() (err error) {
-	var resp Resp
+	var resp interface{}
 
 	err, store := config.GetStore(table.StoreID)
 	if err != nil {
@@ -265,11 +241,6 @@ func (table *Table) VoidCheck() (err error) {
 	log.Logger.Infof("new_check response: %+v", resp)
 	if err != nil {
 		log.Logger.Errorf("Get sevenroom err %s", err)
-		return
-	}
-	if resp.Result != "success" {
-		err = fmt.Errorf("Get sevenroom err, resp: %+v", resp)
-		log.Logger.Error(err)
 		return
 	}
 
@@ -349,7 +320,7 @@ func (table *Table) GetAndSaveTransactions() (err error, trans []Transaction) {
 }
 
 func (table *Table) CanclePayment() (err error) {
-	var resp Resp
+	var resp interface{}
 
 	err, store := config.GetStore(table.StoreID)
 	if err != nil {
@@ -375,11 +346,6 @@ func (table *Table) CanclePayment() (err error) {
 		log.Logger.Errorf("CanclePayment err %s", err)
 		return
 	}
-	if resp.Result != "success" {
-		err = fmt.Errorf("CanclePayment err, resp: %+v", resp)
-		log.Logger.Error(err)
-		return
-	}
 
 	table.HasSync = true
 	table.Status = TableStatusCancle
@@ -394,15 +360,18 @@ func (table *Table) GetLineItems() (err error, lineItems []LineItem) {
 	var gLineItem gatewaymodels.LineItem
 	var gLineItems []gatewaymodels.LineItem
 	var lineItem LineItem
+	var count int
 	if err = db.GatewayDB.Model(&gLineItem).Where("order_id = ?", table.OrderID).Find(&gLineItems).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 		}
 		log.Logger.Errorf("find GatewayDB LineItems err: %s", err)
 		return
 	}
-	if err = db.DB.Model(&lineItem).Where("table_id = ? ", table.ID).Delete("").Error; err != nil {
-		log.Logger.Errorf("delete LineItems err: %s", err)
-		return
+	if db.DB.Model(&lineItem).Where("table_id = ? ", table.ID).Count(&count); count > 0 {
+		if err = db.DB.Model(&lineItem).Where("table_id = ? ", table.ID).Delete(&lineItem).Error; err != nil {
+			log.Logger.Errorf("delete LineItems err: %s", err)
+			return
+		}
 	}
 
 	for _, l := range gLineItems {

@@ -38,68 +38,6 @@ func (p *PartyMqMessage) FilterPartyBySettingStores() (err error) {
 	return fmt.Errorf("store id: %d not in setting", p.StoreID)
 }
 
-func (p *PartyMqMessage) AnalyzeRecordFromMQ() (err error, table models.Table) {
-	if err = db.DB.Model(table).Where("restaurant_party_id = ?", p.PartyID).Limit(1).Find(&table).Error; err == nil {
-		if table.HasSync == true && table.Status == models.TableStatusClose {
-			return
-		}
-		if p.UnseatedAt == 0 && p.SeatedAt != 0 {
-			// 更新
-			table.CheckOpenTime = p.SeatedAt
-			table.CheckCloseTime = p.UnseatedAt
-			fmt.Printf("\n +++CheckCloseTime: %d, %s", table.CheckCloseTime, table.Table)
-			table.Status = models.TableStatusUpdate
-			t := time.Now()
-			table.RestaurantUpdatedAt = &t
-			table.HasSync = false
-			err = db.DB.Model(&table).Save(&table).Error
-			if err != nil {
-				log.Logger.Errorf("\n AnalyzeRecord save table err: %s", err)
-				return
-			}
-			table.UpdateCheck()
-		} else if p.UnseatedAt != 0 {
-			// close check
-			table.CheckOpenTime = p.SeatedAt
-			table.CheckCloseTime = p.UnseatedAt
-			fmt.Printf("\n +++CheckCloseTime: %d, %s", table.CheckCloseTime, table.Table)
-			table.StoreID = p.StoreID
-			table.Status = models.TableStatusClose
-			t := time.Now()
-			table.RestaurantUpdatedAt = &t
-			table.HasSync = false
-			err = db.DB.Model(&table).Save(&table).Error
-			if err != nil {
-				log.Logger.Errorf("\n AnalyzeRecord save table err: %s", err)
-				return
-			}
-			// table.CloseCheck()
-		}
-	} else if err == gorm.ErrRecordNotFound {
-		table.Table = p.TableName
-		table.RestaurantTableID = p.TableID
-		table.RestaurantPartyID = p.PartyID
-		t := time.Now()
-		table.RestaurantUpdatedAt = &t
-		table.GuestCount = p.People
-		table.CheckOpenTime = p.SeatedAt
-		table.CheckCloseTime = p.UnseatedAt
-		table.CheckRef = p.OrderNumber
-		table.StoreID = p.StoreID
-		table.Status = models.TableStatusCreate
-		table.HasSync = false
-		err = db.DB.Model(&table).Create(&table).Error
-		if err != nil {
-			log.Logger.Errorf("PartyID %d Create table err: %s", p.PartyID, err)
-		}
-		table.CreateCheck()
-	} else {
-		log.Logger.Errorf("CreateRecord err: %s", err)
-		return err, table
-	}
-	return
-}
-
 func AnalyzeRecord(p *restaurantmodels.Party, pg *restaurantmodels.PartyGroup) (err error, table models.Table) {
 	if pg.Status.V() == "check_dropped" {
 		return
