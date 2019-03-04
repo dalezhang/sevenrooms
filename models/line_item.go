@@ -3,6 +3,7 @@ package models
 import (
 	"bindolabs/sevenrooms/db"
 	"bindolabs/sevenrooms/log"
+	"time"
 
 	"bindolabs/sevenrooms/gatewaymodels"
 
@@ -10,7 +11,9 @@ import (
 )
 
 type LineItem struct {
-	gorm.Model
+	ID                uint `gorm:"primary_key"`
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 	GatewayLineItemID int     `gorm:"column:gateway_line_item_id; type:int(11) ;" json:"gateway_line_item_id"`
 	TableID           uint    `gorm:"column:table_id; type:int(11) ;" json:"table_id"`
 	Name              string  `gorm:"column:name; type:varchar(255) ;" json:"name"`
@@ -23,6 +26,7 @@ type LineItem struct {
 func (*LineItem) TableName() string {
 	return "line_items"
 }
+
 func (l *LineItem) GetListingBarcode() {
 	var listingSnapshot gatewaymodels.ListingSnapshot
 	var err error
@@ -32,6 +36,7 @@ func (l *LineItem) GetListingBarcode() {
 	if err = db.GatewayDB.Model(&listingSnapshot).Where("line_item_id = ?", l.GatewayLineItemID).Find(&listingSnapshot).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			l.ListingBarcode = listingSnapshot.ListingBarcode.V()
+			return
 		}
 		log.Logger.Errorf("find GatewayDB LineItems err: %s", err)
 		return
