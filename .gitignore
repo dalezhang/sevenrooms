@@ -1,2 +1,4 @@
 config/token
 config/*.yml
+.DS_Store
+main

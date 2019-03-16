@@ -1,6 +1,6 @@
 #!/bin/bash
 time=$(date -d '-1 day' +%Y-%m-%d)
-cd /opt/sevenrooms/log
+cd /opt/sevenroom/log
 cp  test.log packing.log
 > test.log
 find -name packing.log -exec tar -zcvf test.log.$time.tar.gz {} --remove-files \;

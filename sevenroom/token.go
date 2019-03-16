@@ -24,24 +24,6 @@ type token struct {
 	Token string `json:"token"`
 }
 
-func getToken() (string, error) {
-	var (
-		resp   authResp
-		params = url.Values{}
-	)
-
-	err := doRequest(http.MethodPost, config.Conf.Setting.OpUrl+"auth?client_id="+config.Conf.Setting.ClientID+"&client_secret="+config.Conf.Setting.ClientSecret, "", params, nil, &resp)
-
-	if err != nil {
-		return "", err
-	}
-
-	if err = config.Conf.SetToken(resp.Data.Token); err != nil {
-		log.Logger.Warnf("set token err: %v", err)
-	}
-	return resp.Data.Token, nil
-}
-
 func (c *Client) wait() {
 	c.lk.Lock()
 	if c.doneChan == nil {
@@ -73,9 +55,7 @@ func (c *Client) refresh() {
 
 func (c *Client) refreshServe() {
 	var (
-		err   error
-		token string
-		wait  bool
+		wait bool
 	)
 
 	duration := 5 * time.Second
@@ -100,15 +80,26 @@ func (c *Client) refreshServe() {
 			timer.Reset(duration)
 		case <-timer.C:
 			timer = nilTimer
-			token, err = getToken()
-			if err != nil {
-				log.Logger.Warnf("get token err: %v", err)
-			} else {
-				c.Token = token
-				c.done()
-			}
+
+			c.done()
 
 			wait = false
 		}
 	}
+}
+
+func GetStoreToken(store *config.Store) error {
+	var (
+		resp   authResp
+		params = url.Values{}
+	)
+
+	err := doRequest(http.MethodPost, config.Conf.Setting.OpUrl+"auth?client_id="+store.ClientID+"&client_secret="+store.ClientSecret, "", params, nil, &resp)
+
+	if err != nil {
+		log.Logger.Warnf("Get token err: %v", err)
+		return err
+	}
+	store.Token = resp.Data.Token
+	return nil
 }

@@ -186,6 +186,7 @@ func CreateTable(p *restaurantmodels.Party, pg *restaurantmodels.PartyGroup) (er
 	table.CheckRef = gOrder.Number.V()
 	table.OrderID = gOrder.ID.V()
 	table.StoreID = pg.StoreID.V()
+	table.OrderReferenceNumber = gOrder.ReferenceNumber.V()
 	table.Status = models.TableStatusCreate
 	table.HasSync = false
 	err = db.DB.Model(&table).Create(&table).Error

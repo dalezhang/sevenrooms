@@ -21,6 +21,8 @@ type LineItem struct {
 	NetTotal          float64 `gorm:"column:net_total; type:decimal(16,2) ;default:'0.00'" json:"net_total"`
 	Qty               float64 `gorm:"column:qty; type:decimal(12,4) ;" json:"qty"`
 	ListingBarcode    string  `gorm:"column:listing_barcode; type:varchar(255) ;" json:"listing_barcode"`
+	Discount          float64 `gorm:"column:discount; type:decimal(16,2) ;default:'0.00'" json:"discount"`
+	PurchasableType   string  `gorm:"column:purchasable_type; type:varchar(255) ;" json:"purchasable_type"`
 }
 
 func (*LineItem) TableName() string {
@@ -35,10 +37,10 @@ func (l *LineItem) GetListingBarcode() {
 	}
 	if err = db.GatewayDB.Model(&listingSnapshot).Where("line_item_id = ?", l.GatewayLineItemID).Find(&listingSnapshot).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			l.ListingBarcode = listingSnapshot.ListingBarcode.V()
 			return
 		}
 		log.Logger.Errorf("find GatewayDB LineItems err: %s", err)
 		return
 	}
+	l.ListingBarcode = listingSnapshot.ListingBarcode.V()
 }
