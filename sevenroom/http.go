@@ -28,7 +28,6 @@ type Client struct {
 	doneChan    chan struct{}
 	refreshChan chan struct{}
 	exitChan    chan struct{}
-	Token       string
 }
 
 func Init() error {
@@ -42,73 +41,61 @@ func Init() error {
 }
 
 func NewClient() (*Client, error) {
-	var err error
-	token := config.Conf.GetToken()
-	fmt.Println("\n =============GetToken", token)
-	if len(token) == 0 {
-		token, err = getToken()
-		if err != nil {
-			return nil, err
-		}
-	}
 	c := &Client{
 		refreshChan: make(chan struct{}),
 		exitChan:    make(chan struct{}),
-
-		Token: token,
 	}
 	go c.refreshServe()
 	return c, nil
 }
 
-func (c *Client) Get(api string, params url.Values, response interface{}) error {
-	return c.doRequest(http.MethodGet, api, params, nil, response)
+func (c *Client) Get(api string, params url.Values, response interface{}, token string) error {
+	return c.doRequest(http.MethodGet, api, params, nil, response, token)
 }
-func (c *Client) Post(api string, body interface{}, response interface{}) error {
-	return c.doRequest(http.MethodPost, api, nil, body, response)
+func (c *Client) Post(api string, body interface{}, response interface{}, token string) error {
+	return c.doRequest(http.MethodPost, api, nil, body, response, token)
 }
 
 func Get(param *url.Values, resp interface{}) (err error) {
-	err = client.Get(config.Conf.Setting.OpUrl, *param, &resp)
+	err = client.Get(config.Conf.Setting.OpUrl, *param, &resp, "")
 	if err != nil {
 		return
 	}
 	return
 }
-func PostWebhooks(venueID string, params *map[string]interface{}, resp interface{}) (err error) {
-	url := fmt.Sprintf("%svenues/%s/webhooks/%s/basket/updates", config.Conf.Setting.OpUrl, venueID, config.Conf.Setting.PosID)
-	err = client.Post(url, params, &resp)
-	return
-}
-
-func (c *Client) doRequest(method, api string, params url.Values, bodyParams interface{}, response interface{}) error {
-	var (
-		err error
-		try int
-	)
+func PostWebhooks(store *config.Store, params *map[string]interface{}, resp interface{}) (err error) {
+	var try int
 
 	for try < config.Conf.Setting.Retry {
 		try++
 		fmt.Println("\n try ====", try)
-		err = doRequest(method, api, c.Token, params, bodyParams, response)
-		if err != nil {
-			fmt.Println("\n err=============", err)
-			r := bytes.NewReader([]byte(fmt.Sprintln(err)))
-			mached, matcherr := regexp.MatchReader(".*Permission denied.*", r)
-			if matcherr != nil {
-				fmt.Printf("\n matcherr =============== %+v \n", matcherr)
-			}
-			if mached {
-				fmt.Println("\n mached ===============")
-				log.Logger.Warnf("invaild token try[%d]again", try)
-				c.refresh()
-				c.wait()
-				continue
-			}
-			return err
+		url := fmt.Sprintf("%svenues/%s/webhooks/%s/basket/updates", config.Conf.Setting.OpUrl, store.VenueID, config.Conf.Setting.PosID)
+		err = client.Post(url, params, &resp, store.Token)
+		r := bytes.NewReader([]byte(fmt.Sprintln(err)))
+		mached, matcherr := regexp.MatchReader(".*Permission denied.*", r)
+		if matcherr != nil {
+			fmt.Printf("\n matcherr =============== %+v \n", matcherr)
 		}
-		return nil
+		if mached {
+			fmt.Println("\n mached ===============")
+			log.Logger.Warnf("invaild token try[%d]again", try)
+			GetStoreToken(store)
+			fmt.Println("\n store.Token ===============", store.Token)
+			continue
+		}
 	}
+	return
+}
+
+func (c *Client) doRequest(method, api string, params url.Values, bodyParams interface{}, response interface{}, token string) error {
+	var (
+		err error
+	)
+	err = doRequest(method, api, token, params, bodyParams, response)
+	if err != nil {
+		return err
+	}
+	return nil
 
 	return err
 }

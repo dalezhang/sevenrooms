@@ -31,13 +31,11 @@ type Config struct {
 	*Setting
 }
 type Setting struct {
-	OpUrl        string           `yaml:"op_url"`
-	Retry        int              `yaml:"retry"`
-	Stores       map[string]Store `yaml:"stores"`
-	ClientID     string           `yaml:"client_id"`
-	ClientSecret string           `yaml:"client_secret"`
-	PosID        string           `yaml:"pos_id"`
-	lk           sync.RWMutex
+	OpUrl  string           `yaml:"op_url"`
+	Retry  int              `yaml:"retry"`
+	Stores map[string]Store `yaml:"stores"`
+	PosID  string           `yaml:"pos_id"`
+	lk     sync.RWMutex
 }
 type DB struct {
 	Adapter  string
@@ -49,9 +47,12 @@ type DB struct {
 	Port     string
 }
 type Store struct {
-	StoreID int    `yaml:"store_id"`
-	VenueID string `yaml:"venue_id"`
-	Name    string `yaml:"name"`
+	StoreID      int    `yaml:"store_id"`
+	VenueID      string `yaml:"venue_id"`
+	Name         string `yaml:"name"`
+	ClientID     string `yaml:"client_id"`
+	ClientSecret string `yaml:"client_secret"`
+	Token        string
 }
 
 func Init() error {
@@ -114,14 +115,9 @@ func load(out interface{}, file, env string) error {
 
 func ValidateSetting() {
 	var errStrs []string
-	if Conf.Setting.ClientID == "" {
-		errStrs = append(errStrs, "Config ClientID is not set")
-	}
+
 	if Conf.Setting.OpUrl == "" {
 		errStrs = append(errStrs, "Config OpUrl is not set")
-	}
-	if Conf.Setting.ClientSecret == "" {
-		errStrs = append(errStrs, "Config ClientSecret is not set")
 	}
 
 	if len(errStrs) > 0 {

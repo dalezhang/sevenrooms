@@ -63,6 +63,7 @@ func GetPartyMsgFromDB() {
 				module.UpdateChecks()
 				module.ListingVoidPayments()
 				module.VoidPaymentOrCloseChecks()
+				module.ScaneOrders()
 				fmt.Printf("\n ==========sleep====================loop %d times\n", i)
 				time.Sleep(time.Duration(10) * time.Second)
 				lock = false

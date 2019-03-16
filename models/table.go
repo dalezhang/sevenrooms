@@ -15,21 +15,25 @@ import (
 
 type Table struct {
 	gorm.Model
-	RestaurantPartyID   int        `gorm:"column:restaurant_party_id; type:int(11) ;" json:"restaurant_group_id"`
-	RestaurantTableID   int        `gorm:"column:restaurant_table_id; type:int(11) ;" json:"restaurant_table_id"`
-	OrderID             int        `gorm:"column:order_id; type:int(11) ;" json:"order_id"`
-	RestaurantUpdatedAt *time.Time `gorm:"column:restaurant_updated_at; timestamp DEFAULT NULL ;" json:"restaurant_updated_at"`
-	Status              int        `gorm:"column:status; type:int(11) ;" json:"status"`
-	StoreID             int        `gorm:"column:store_id; type:int(11) ;" json:"store_id"`
-	CheckRef            string     `gorm:"column:check_ref; type:varchar(255) ;" json:"check_ref"`
-	CheckOpenTime       int64      `gorm:"column:check_open_time; type:int(64) ;" json:"check_open_time"`
-	CheckCloseTime      int64      `gorm:"column:check_close_time; type:int(64) ;" json:"check_close_time"`
-	Table               string     `gorm:"column:table; type:varchar(255) ;" json:"table"`
-	OrgTable            string     `gorm:"column:org_table; type:varchar(255) ;" json:"org_table"`
-	TotalAmount         float64    `gorm:"column:total_amount; type:decimal(12,2) ;" json:"total_amount"`
-	GuestCount          int        `gorm:"column:guest_count; type:int(11) ;" json:"guest_count"`
-	ChildCount          int        `gorm:"column:chind_count; type:int(11) ;" json:"chind_count"`
-	HasSync             bool       `gorm:"column:has_sync; type:tinyint(1) ;default:'0'" json:"has_sync"`
+	RestaurantPartyID    int        `gorm:"column:restaurant_party_id; type:int(11) ;" json:"restaurant_group_id"`
+	RestaurantTableID    int        `gorm:"column:restaurant_table_id; type:int(11) ;" json:"restaurant_table_id"`
+	OrderID              int        `gorm:"column:order_id; type:int(11) ;" json:"order_id"`
+	OrderReferenceNumber string     `gorm:"column:order_reference_number; type:varchar(255) ;" json:"order_reference_number"`
+	RestaurantUpdatedAt  *time.Time `gorm:"column:restaurant_updated_at; timestamp DEFAULT NULL ;" json:"restaurant_updated_at"`
+	Status               int        `gorm:"column:status; type:int(11) ;" json:"status"`
+	StoreID              int        `gorm:"column:store_id; type:int(11) ;" json:"store_id"`
+	CheckRef             string     `gorm:"column:check_ref; type:varchar(255) ;" json:"check_ref"`
+	CheckOpenTime        int64      `gorm:"column:check_open_time; type:int(64) ;" json:"check_open_time"`
+	CheckCloseTime       int64      `gorm:"column:check_close_time; type:int(64) ;" json:"check_close_time"`
+	Table                string     `gorm:"column:table; type:varchar(255) ;" json:"table"`
+	OrgTable             string     `gorm:"column:org_table; type:varchar(255) ;" json:"org_table"`
+	TotalAmount          float64    `gorm:"column:total_amount; type:decimal(12,2) ;" json:"total_amount"`
+	Subtotal             float64    `gorm:"column:subtotal; type:decimal(12,2) ;" json:"subtotal"`
+	OrderDiscount        float64    `gorm:"column:order_discount; type:decimal(12,2) ;" json:"order_discount"`
+	OrderNote            string     `gorm:"column:order_note; type:varchar(255) ;" json:"order_note"`
+	GuestCount           int        `gorm:"column:guest_count; type:int(11) ;" json:"guest_count"`
+	ChildCount           int        `gorm:"column:chind_count; type:int(11) ;" json:"chind_count"`
+	HasSync              bool       `gorm:"column:has_sync; type:tinyint(1) ;default:'0'" json:"has_sync"`
 }
 
 const (
@@ -57,6 +61,7 @@ func (table *Table) UpdateCheck() (err error) {
 		"check_open_time":  time.Unix(table.CheckOpenTime, 0).Format(time.RFC3339),
 		"table":            table.Table,
 		"order_number":     table.CheckRef,
+		"reference_number": table.OrderReferenceNumber,
 		"store_id":         store.StoreID,
 		"store_name":       store.Name,
 		"check_close_time": time.Now().Format(time.RFC3339),
@@ -67,7 +72,68 @@ func (table *Table) UpdateCheck() (err error) {
 	} else {
 		params["guest_count"] = table.GuestCount
 	}
-	err = sevenroom.PostWebhooks(store.VenueID, &params, &resp)
+	err = sevenroom.PostWebhooks(&store, &params, &resp)
+
+	log.Logger.Infof("update_check response: %+v", resp)
+	if err != nil {
+		log.Logger.Errorf("Get sevenroom err %s", err)
+		return
+	}
+	table.HasSync = true
+	table.Status = TableStatusUpdate
+	err = db.DB.Model(&table).Save(&table).Error
+	if err != nil {
+		log.Logger.Errorf("UpdateCheck save table err: %s", err)
+	}
+	return
+}
+
+func (table *Table) UpdateItems(gOrder gatewaymodels.Order) (err error) {
+	var resp interface{}
+	err, store := config.GetStore(table.StoreID)
+	if err != nil {
+		log.Logger.Errorf("GetStore err: %s", err)
+		return
+	}
+	table.Subtotal = gOrder.Subtotal.V()
+	table.OrderDiscount = gOrder.DiscountTotal.V()
+	table.TotalAmount = gOrder.InitialTotal.V()
+	err, lineItems := table.GetLineItems()
+	if err != nil {
+		log.Logger.Errorf("LineItems err: %s", err)
+		return
+	}
+	var lineItemData []map[string]interface{}
+	for _, l := range lineItems {
+		a := map[string]interface{}{
+			"listing_barcode":  l.ListingBarcode,
+			"name":             l.Name,
+			"qty":              l.Qty,
+			"price":            l.Price,
+			"discount":         l.Discount,
+			"net_total":        l.NetTotal,
+			"purchasable_type": l.PurchasableType,
+		}
+		lineItemData = append(lineItemData, a)
+	}
+	params := map[string]interface{}{
+		"function":         "update_item",
+		"check_open_time":  time.Unix(table.CheckOpenTime, 0).Format(time.RFC3339),
+		"order_number":     table.CheckRef,
+		"reference_number": table.OrderReferenceNumber,
+		"store_id":         store.StoreID,
+		"store_name":       store.Name,
+		"subtotal":         table.Subtotal,
+		"order_discount":   table.OrderDiscount,
+		"total_amount":     table.TotalAmount,
+		"item":             lineItemData,
+	}
+	if table.GuestCount == 0 {
+		params["guest_count"] = 1
+	} else {
+		params["guest_count"] = table.GuestCount
+	}
+	err = sevenroom.PostWebhooks(&store, &params, &resp)
 
 	log.Logger.Infof("update_check response: %+v", resp)
 	if err != nil {
@@ -90,6 +156,16 @@ func (table *Table) CloseCheck() (err error) {
 		log.Logger.Errorf("GetStore err: %s", err)
 		return
 	}
+	var gOrder gatewaymodels.Order
+	if err = db.GatewayDB.Model(&gOrder).Find(&gOrder, table.OrderID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+		}
+		log.Logger.Errorf("VoidPaymentOrCloseCheck find order err: %s", err)
+		return
+	}
+	table.Subtotal = gOrder.Subtotal.V()
+	table.OrderDiscount = gOrder.DiscountTotal.V()
+	table.OrderNote = gOrder.Note.V()
 	err, lineItems := table.GetLineItems()
 	if err != nil {
 		log.Logger.Errorf("LineItems err: %s", err)
@@ -98,11 +174,13 @@ func (table *Table) CloseCheck() (err error) {
 	var lineItemData []map[string]interface{}
 	for _, l := range lineItems {
 		a := map[string]interface{}{
-			"listing_barcode": l.ListingBarcode,
-			"name":            l.Name,
-			"qty":             l.Qty,
-			"price":           l.Price,
-			"net_total":       l.NetTotal,
+			"listing_barcode":  l.ListingBarcode,
+			"name":             l.Name,
+			"qty":              l.Qty,
+			"price":            l.Price,
+			"discount":         l.Discount,
+			"net_total":        l.NetTotal,
+			"purchasable_type": l.PurchasableType,
 		}
 		lineItemData = append(lineItemData, a)
 	}
@@ -111,10 +189,14 @@ func (table *Table) CloseCheck() (err error) {
 		"check_open_time":  time.Unix(table.CheckOpenTime, 0).Format(time.RFC3339),
 		"table":            table.Table,
 		"order_number":     table.CheckRef,
+		"reference_number": table.OrderReferenceNumber,
 		"store_id":         store.StoreID,
 		"store_name":       store.Name,
 		"check_close_time": time.Now().Format(time.RFC3339),
 		"total_amount":     table.TotalAmount,
+		"subtotal":         table.Subtotal,
+		"order_discount":   table.OrderDiscount,
+		"order_note":       table.OrderNote,
 		"item":             lineItemData,
 	}
 	if table.GuestCount == 0 {
@@ -122,7 +204,7 @@ func (table *Table) CloseCheck() (err error) {
 	} else {
 		params["guest_count"] = table.GuestCount
 	}
-	err = sevenroom.PostWebhooks(store.VenueID, &params, &resp)
+	err = sevenroom.PostWebhooks(&store, &params, &resp)
 	log.Logger.Infof("close_check response: %+v", resp)
 	if err != nil {
 		log.Logger.Errorf("Get sevenroom err %s", err)
@@ -145,20 +227,40 @@ func (table *Table) CreateCheck() (err error) {
 		log.Logger.Errorf("GetStore err: %s", err)
 		return
 	}
+	err, lineItems := table.GetLineItems()
+	if err != nil {
+		log.Logger.Errorf("LineItems err: %s", err)
+		return
+	}
+	var lineItemData []map[string]interface{}
+	for _, l := range lineItems {
+		a := map[string]interface{}{
+			"listing_barcode":  l.ListingBarcode,
+			"name":             l.Name,
+			"qty":              l.Qty,
+			"price":            l.Price,
+			"discount":         l.Discount,
+			"net_total":        l.NetTotal,
+			"purchasable_type": l.PurchasableType,
+		}
+		lineItemData = append(lineItemData, a)
+	}
 	params := map[string]interface{}{
-		"function":        "new_check",
-		"check_open_time": time.Unix(table.CheckOpenTime, 0).Format(time.RFC3339),
-		"table":           table.Table,
-		"order_number":    table.CheckRef,
-		"store_id":        store.StoreID,
-		"store_name":      store.Name,
+		"function":         "new_check",
+		"check_open_time":  time.Unix(table.CheckOpenTime, 0).Format(time.RFC3339),
+		"table":            table.Table,
+		"order_number":     table.CheckRef,
+		"reference_number": table.OrderReferenceNumber,
+		"store_id":         store.StoreID,
+		"store_name":       store.Name,
+		"item":             lineItemData,
 	}
 	if table.GuestCount == 0 {
 		params["guest_count"] = 1
 	} else {
 		params["guest_count"] = table.GuestCount
 	}
-	err = sevenroom.PostWebhooks(store.VenueID, &params, &resp)
+	err = sevenroom.PostWebhooks(&store, &params, &resp)
 	log.Logger.Infof("new_check response: %+v", resp)
 	if err != nil {
 		log.Logger.Errorf("CreateCheck err %s", err)
@@ -184,21 +286,22 @@ func (table *Table) MoveTable() (err error) {
 		return
 	}
 	params := map[string]interface{}{
-		"function":        "move_table",
-		"check_open_time": time.Unix(table.CheckOpenTime, 0).Format(time.RFC3339),
-		"table":           table.Table,
-		"order_number":    table.CheckRef,
-		"store_id":        store.StoreID,
-		"store_name":      store.Name,
-		"from_table":      table.OrgTable,
-		"to_table":        table.Table,
+		"function":         "move_table",
+		"check_open_time":  time.Unix(table.CheckOpenTime, 0).Format(time.RFC3339),
+		"table":            table.Table,
+		"order_number":     table.CheckRef,
+		"reference_number": table.OrderReferenceNumber,
+		"store_id":         store.StoreID,
+		"store_name":       store.Name,
+		"from_table":       table.OrgTable,
+		"to_table":         table.Table,
 	}
 	if table.GuestCount == 0 {
 		params["guest_count"] = 1
 	} else {
 		params["guest_count"] = table.GuestCount
 	}
-	err = sevenroom.PostWebhooks(store.VenueID, &params, &resp)
+	err = sevenroom.PostWebhooks(&store, &params, &resp)
 
 	log.Logger.Infof("new_check response: %+v", resp)
 	if err != nil {
@@ -224,19 +327,20 @@ func (table *Table) VoidCheck() (err error) {
 		return
 	}
 	params := map[string]interface{}{
-		"function":        "void_check",
-		"check_open_time": time.Unix(table.CheckOpenTime, 0).Format(time.RFC3339),
-		"table":           table.Table,
-		"order_number":    table.CheckRef,
-		"store_id":        store.StoreID,
-		"store_name":      store.Name,
+		"function":         "void_check",
+		"check_open_time":  time.Unix(table.CheckOpenTime, 0).Format(time.RFC3339),
+		"table":            table.Table,
+		"order_number":     table.CheckRef,
+		"reference_number": table.OrderReferenceNumber,
+		"store_id":         store.StoreID,
+		"store_name":       store.Name,
 	}
 	if table.GuestCount == 0 {
 		params["guest_count"] = 1
 	} else {
 		params["guest_count"] = table.GuestCount
 	}
-	err = sevenroom.PostWebhooks(store.VenueID, &params, &resp)
+	err = sevenroom.PostWebhooks(&store, &params, &resp)
 
 	log.Logger.Infof("new_check response: %+v", resp)
 	if err != nil {
@@ -328,19 +432,20 @@ func (table *Table) CanclePayment() (err error) {
 		return
 	}
 	params := map[string]interface{}{
-		"function":        "cancel_payment",
-		"check_open_time": time.Unix(table.CheckOpenTime, 0).Format(time.RFC3339),
-		"table":           table.Table,
-		"order_number":    table.CheckRef,
-		"store_id":        store.StoreID,
-		"store_name":      store.Name,
+		"function":         "cancel_payment",
+		"check_open_time":  time.Unix(table.CheckOpenTime, 0).Format(time.RFC3339),
+		"table":            table.Table,
+		"order_number":     table.CheckRef,
+		"reference_number": table.OrderReferenceNumber,
+		"store_id":         store.StoreID,
+		"store_name":       store.Name,
 	}
 	if table.GuestCount == 0 {
 		params["guest_count"] = 1
 	} else {
 		params["guest_count"] = table.GuestCount
 	}
-	err = sevenroom.PostWebhooks(store.VenueID, &params, &resp)
+	err = sevenroom.PostWebhooks(&store, &params, &resp)
 	log.Logger.Infof("cancle_payment response: %+v", resp)
 	if err != nil {
 		log.Logger.Errorf("CanclePayment err %s", err)
@@ -382,6 +487,8 @@ func (table *Table) GetLineItems() (err error, lineItems []LineItem) {
 		lineItem.Qty = l.Quantity.V()
 		lineItem.Price = l.Price.V()
 		lineItem.NetTotal = l.Total.V()
+		lineItem.Discount = l.DiscountTotal.V()
+		lineItem.PurchasableType = l.PurchasableType.V()
 		lineItem.GetListingBarcode()
 		if err = db.DB.Model(&lineItem).Create(&lineItem).Error; err != nil {
 			log.Logger.Errorf("create LineItems err: %s", err)
