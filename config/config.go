@@ -66,6 +66,7 @@ func Init() error {
 		fmt.Println("\n ENV=====production")
 		log.Init(true)
 		Conf.Prod = true
+		Conf.Debug = true
 	} else {
 		fmt.Println("\n ENV=====staging")
 		log.Init(true)

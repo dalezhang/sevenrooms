@@ -71,6 +71,9 @@ func PostWebhooks(store *config.Store, params *map[string]interface{}, resp inte
 		fmt.Println("\n try ====", try)
 		url := fmt.Sprintf("%svenues/%s/webhooks/%s/basket/updates", config.Conf.Setting.OpUrl, store.VenueID, config.Conf.Setting.PosID)
 		err = client.Post(url, params, &resp, store.Token)
+		if err == nil {
+			return
+		}
 		r := bytes.NewReader([]byte(fmt.Sprintln(err)))
 		mached, matcherr := regexp.MatchReader(".*Permission denied.*", r)
 		if matcherr != nil {

@@ -126,6 +126,7 @@ func (table *Table) UpdateItems(gOrder gatewaymodels.Order) (err error) {
 		"subtotal":         table.Subtotal,
 		"order_discount":   table.OrderDiscount,
 		"total_amount":     table.TotalAmount,
+		"table":            table.Table,
 		"item":             lineItemData,
 	}
 	if table.GuestCount == 0 {
