@@ -293,7 +293,9 @@ type Resp struct {
 func GetLastUpdatePartyTime() (time.Time, error) {
 	var table models.Table
 	ct := time.Now().Add(-24 * time.Hour)
-	err := db.DB.Model(&table).Select("restaurant_updated_at").Order("restaurant_updated_at desc").Limit(1).Find(&table).Error
+	err := db.DB.Model(&table).Select("updated_at,id").Order("updated_at desc").Limit(1).Find(&table).Error
+	fmt.Println("\n err ===", err)
+	fmt.Println("\n table.RestaurantUpdatedAt ===", table.UpdatedAt, "id == ", table.ID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return ct, nil
@@ -301,11 +303,14 @@ func GetLastUpdatePartyTime() (time.Time, error) {
 		return ct, err
 	}
 
-	return *table.RestaurantUpdatedAt, nil
+	return table.UpdatedAt, nil
 }
 
 func ScaneParties() (err error, rParties []restaurantmodels.Party) {
 	dt, err := GetLastUpdatePartyTime()
+	if err != nil {
+		fmt.Println(err)
+	}
 	fmt.Printf("GetLastUpdatePartyTime %+v", dt)
 	du := time.Duration(-10 * 60 * 1000 * 1000 * 1000) //允许10分钟的通讯延迟
 	dt = dt.Add(du)
